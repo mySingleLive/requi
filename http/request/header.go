@@ -1,4 +1,4 @@
-package http
+package request
 
 // Header of HTTP Request
 type Header struct {

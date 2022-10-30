@@ -5,7 +5,7 @@ import (
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/mySingleLive/requi/http"
+	"github.com/mySingleLive/requi/http/request"
 	"github.com/spf13/cast"
 	"io"
 )
@@ -13,28 +13,29 @@ import (
 const listHeight = 16
 
 var (
-	titleStyle        = lipgloss.NewStyle().MarginLeft(2)
-	itemStyle         = lipgloss.NewStyle().PaddingLeft(4)
-	selectedItemStyle = lipgloss.NewStyle().PaddingLeft(2).Foreground(lipgloss.Color("170"))
-	paginationStyle   = list.DefaultStyles().PaginationStyle.PaddingLeft(4)
-	helpStyle         = list.DefaultStyles().HelpStyle.PaddingLeft(4).PaddingBottom(1)
-	quitTextStyle     = lipgloss.NewStyle().Margin(1, 0, 2, 4)
-	reqTypes          = []http.RequestType{
-		http.GET,
-		http.POST,
-		http.PUT,
-		http.HEAD,
-		http.DELETE,
-		http.OPTIONS,
-		http.TRACE,
-		http.PATCH,
+	titleStyle            = lipgloss.NewStyle().MarginLeft(2).Bold(true).Foreground(lipgloss.Color("170"))
+	itemStyle             = lipgloss.NewStyle().PaddingLeft(4).Foreground(lipgloss.Color("#929292"))
+	selectedItemStyle     = lipgloss.NewStyle().Width(25).PaddingLeft(2).Bold(true).Background(lipgloss.Color("170"))
+	lastSelectedItemStyle = lipgloss.NewStyle().PaddingLeft(4).Foreground(lipgloss.Color("170"))
+	paginationStyle       = list.DefaultStyles().PaginationStyle.PaddingLeft(4)
+	helpStyle             = list.DefaultStyles().HelpStyle.PaddingLeft(4).PaddingBottom(1)
+	quitTextStyle         = lipgloss.NewStyle().Margin(1, 0, 2, 4)
+	reqTypes              = []request.RequestType{
+		request.GET,
+		request.POST,
+		request.PUT,
+		request.HEAD,
+		request.DELETE,
+		request.OPTIONS,
+		request.TRACE,
+		request.PATCH,
 	}
 )
 
-type item http.RequestType
+type item request.RequestType
 
 func (i item) FilterValue() string {
-	reqType := http.RequestType(i)
+	reqType := request.RequestType(i)
 	return reqType.Name()
 }
 
@@ -48,7 +49,7 @@ func (d itemDelegate) Render(w io.Writer, m list.Model, index int, listItem list
 	if !ok {
 		return
 	}
-	reqType := http.RequestType(i)
+	reqType := request.RequestType(i)
 	str := fmt.Sprintf("%d. %s", index+1, reqType.Name())
 
 	fn := itemStyle.Render
@@ -56,13 +57,18 @@ func (d itemDelegate) Render(w io.Writer, m list.Model, index int, listItem list
 		fn = func(s string) string {
 			return selectedItemStyle.Render("> " + s)
 		}
+	} else if index == reqTypeListView.lastSelectedIndex {
+		fn = func(s string) string {
+			return lastSelectedItemStyle.Render(s)
+		}
 	}
 
 	fmt.Fprint(w, fn(str))
 }
 
 type ReqTypeListView struct {
-	list list.Model
+	list              list.Model
+	lastSelectedIndex int
 }
 
 func NewReqTypeListView() *ReqTypeListView {
@@ -84,7 +90,8 @@ func NewReqTypeListView() *ReqTypeListView {
 	list.Styles.PaginationStyle = paginationStyle
 
 	return &ReqTypeListView{
-		list: list,
+		list:              list,
+		lastSelectedIndex: 0,
 	}
 }
 
@@ -96,6 +103,7 @@ func (tl *ReqTypeListView) SelectCurrentType() {
 	for i, reqType := range reqTypes {
 		if reqType.Name() == Context.reqType.Name() {
 			tl.list.Select(i)
+			tl.lastSelectedIndex = i
 			return
 		}
 	}
@@ -118,13 +126,15 @@ func (tl *ReqTypeListView) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return tl, tea.Quit
 		case tea.KeyEsc, tea.KeyCtrlT:
 			Context.view = Main
+			simpleReqView.url.Focus()
 			return tl, nil
 		case tea.KeyEnter:
 			i, ok := tl.list.SelectedItem().(item)
 			if ok {
-				Context.reqType = http.RequestType(i)
+				Context.reqType = request.RequestType(i)
 			}
 			Context.view = Main
+			simpleReqView.url.Focus()
 			return tl, nil
 		}
 

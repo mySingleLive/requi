@@ -1,4 +1,4 @@
-package http
+package request
 
 type RequestType uint8
 
@@ -41,4 +41,10 @@ type Request struct {
 	URL     string
 	Headers []Header
 	Body    Body
+}
+
+func New(typ RequestType) *Request {
+	return &Request{
+		Type: typ,
+	}
 }

@@ -1,4 +1,4 @@
-package http
+package request
 
 // QueryParam of HTTP request
 type QueryParam struct {

@@ -1,4 +1,4 @@
-package http
+package request
 
 type URL struct {
 	Schema string

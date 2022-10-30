@@ -1,4 +1,4 @@
-package http
+package request
 
 type BodyType uint8
 
