@@ -13,12 +13,12 @@ import (
 const listHeight = 16
 
 var (
-	titleStyle            = lipgloss.NewStyle().MarginLeft(2).Bold(true).Foreground(lipgloss.Color("170"))
-	itemStyle             = lipgloss.NewStyle().PaddingLeft(4).Foreground(lipgloss.Color("#929292"))
-	selectedItemStyle     = lipgloss.NewStyle().Width(25).PaddingLeft(2).Bold(true).Background(lipgloss.Color("170"))
-	lastSelectedItemStyle = lipgloss.NewStyle().PaddingLeft(4).Foreground(lipgloss.Color("170"))
-	paginationStyle       = list.DefaultStyles().PaginationStyle.PaddingLeft(4)
-	helpStyle             = list.DefaultStyles().HelpStyle.PaddingLeft(4).PaddingBottom(1)
+	titleStyle            = lipgloss.NewStyle().MarginLeft(1).Bold(true).Foreground(lipgloss.Color("170"))
+	itemStyle             = lipgloss.NewStyle().PaddingLeft(3).Foreground(lipgloss.Color("#929292"))
+	selectedItemStyle     = lipgloss.NewStyle().Width(25).PaddingLeft(1).Bold(true).Background(lipgloss.Color("170"))
+	lastSelectedItemStyle = lipgloss.NewStyle().PaddingLeft(3).Foreground(lipgloss.Color("170"))
+	paginationStyle       = list.DefaultStyles().PaginationStyle.PaddingLeft(3)
+	helpStyle             = list.DefaultStyles().HelpStyle.PaddingLeft(3).PaddingBottom(1)
 	quitTextStyle         = lipgloss.NewStyle().Margin(1, 0, 2, 4)
 	reqTypes              = []request.RequestType{
 		request.GET,
@@ -85,6 +85,9 @@ func NewReqTypeListView() *ReqTypeListView {
 	list.Title = "Choose the request type"
 	list.SetShowStatusBar(false)
 	list.SetFilteringEnabled(false)
+	list.KeyMap.CursorUp.SetKeys("up", "k", "ctrl+p")
+	list.KeyMap.CursorDown.SetKeys("down", "j", "ctrl+n")
+	list.SetShowHelp(false)
 	list.Styles.Title = titleStyle
 	list.Styles.HelpStyle = helpStyle
 	list.Styles.PaginationStyle = paginationStyle
@@ -101,7 +104,7 @@ func (tl *ReqTypeListView) Init() tea.Cmd {
 
 func (tl *ReqTypeListView) SelectCurrentType() {
 	for i, reqType := range reqTypes {
-		if reqType.Name() == Context.reqType.Name() {
+		if reqType.Name() == Context.req.Type.Name() {
 			tl.list.Select(i)
 			tl.lastSelectedIndex = i
 			return
@@ -126,15 +129,15 @@ func (tl *ReqTypeListView) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return tl, tea.Quit
 		case tea.KeyEsc, tea.KeyCtrlT:
 			Context.view = Main
-			simpleReqView.url.Focus()
+			simpleReqView.urlInput.Focus()
 			return tl, nil
-		case tea.KeyEnter:
+		case tea.KeyEnter, tea.KeySpace:
 			i, ok := tl.list.SelectedItem().(item)
 			if ok {
-				Context.reqType = request.RequestType(i)
+				Context.req.Type = request.RequestType(i)
 			}
 			Context.view = Main
-			simpleReqView.url.Focus()
+			simpleReqView.urlInput.Focus()
 			return tl, nil
 		}
 

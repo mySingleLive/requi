@@ -36,8 +36,18 @@ func (t RequestType) Name() string {
 	return "unspecified"
 }
 
+type RequestState uint8
+
+const (
+	Initialized RequestState = iota
+	Sending
+	Success
+	Error
+)
+
 type Request struct {
 	Type    RequestType
+	State   RequestState
 	URL     string
 	Headers []Header
 	Body    Body
@@ -45,6 +55,7 @@ type Request struct {
 
 func New(typ RequestType) *Request {
 	return &Request{
-		Type: typ,
+		Type:  typ,
+		State: Initialized,
 	}
 }
