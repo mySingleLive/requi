@@ -13,7 +13,7 @@ import (
 const listHeight = 16
 
 var (
-	titleStyle            = lipgloss.NewStyle().MarginLeft(1).Bold(true).Foreground(lipgloss.Color("170"))
+	reqTypeListTitleStyle = lipgloss.NewStyle().MarginLeft(1).Bold(true).Foreground(lipgloss.Color("44"))
 	itemStyle             = lipgloss.NewStyle().PaddingLeft(3).Foreground(lipgloss.Color("#929292"))
 	selectedItemStyle     = lipgloss.NewStyle().Width(27).PaddingLeft(1).Bold(true).Background(lipgloss.Color("170"))
 	lastSelectedItemStyle = lipgloss.NewStyle().PaddingLeft(3).Foreground(lipgloss.Color("170"))
@@ -82,13 +82,13 @@ func NewReqTypeListView() *ReqTypeListView {
 	}
 
 	list := list.New(items, itemDelegate{}, defaultWidth, listHeight)
-	list.Title = "Choose the request type"
+	list.Title = "choose the request type"
 	list.SetShowStatusBar(false)
 	list.SetFilteringEnabled(false)
 	list.KeyMap.CursorUp.SetKeys("up", "k", "ctrl+p")
 	list.KeyMap.CursorDown.SetKeys("down", "j", "ctrl+n")
 	list.SetShowHelp(false)
-	list.Styles.Title = titleStyle
+	list.Styles.Title = reqTypeListTitleStyle
 	list.Styles.HelpStyle = helpStyle
 	list.Styles.PaginationStyle = paginationStyle
 

@@ -1,6 +1,6 @@
 package request
 
-// Header of HTTP Request
+// Header of HTTP Req
 type Header struct {
 	Name  string // Name of Header
 	Value string // Value of Header

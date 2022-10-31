@@ -5,6 +5,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/mySingleLive/requi/http/request"
+	"github.com/mySingleLive/requi/tui/layout"
 )
 
 var (
@@ -19,7 +20,7 @@ type PendingView struct {
 
 func NewPendingView() *PendingView {
 	s := spinner.New()
-	s.Spinner = spinner.MiniDot
+	s.Spinner = spinner.Line
 	s.Style = lipgloss.NewStyle().Foreground(lipgloss.Color("205"))
 	return &PendingView{
 		spinner: s,
@@ -42,8 +43,7 @@ func (p *PendingView) Update(msg tea.Msg) (*PendingView, tea.Cmd) {
 func (p *PendingView) View() string {
 	if Context.req.State == request.Sending {
 		return pendingBoxStyle.Render(
-			lipgloss.JoinHorizontal(
-				lipgloss.Left,
+			layout.HLeft(
 				p.spinner.View(),
 				pendingTextStyle.Render(p.text),
 			))

@@ -6,18 +6,22 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/mySingleLive/requi/http/request"
+	"github.com/mySingleLive/requi/http/response"
+	"github.com/mySingleLive/requi/tui/layout"
 	url2 "net/url"
 )
 
 var (
-	mainBoxStyle        = lipgloss.NewStyle().Margin(0, 0, 0, 2)
-	requestLineBoxStyle = lipgloss.NewStyle().Margin(0, 0, 1, 0)
-	reqTypeStyle        = lipgloss.NewStyle().Margin(0, 1, 0, 0).Padding(0, 1, 0, 1).Bold(true).Foreground(lipgloss.Color("170"))
-	urlStyle            = lipgloss.NewStyle().Foreground(lipgloss.Color("45"))
-	simpleReqView       = NewSimpleView()
-	reqTypeListView     = NewReqTypeListView()
-	pendingView         = NewPendingView()
-	Context             = NewViewContext()
+	mainBoxStyle      = lipgloss.NewStyle().Margin(0, 0, 0, 2)
+	reqLineTitleStyle = lipgloss.NewStyle().MarginBottom(1).Foreground(lipgloss.Color("44"))
+	reqTypeStyle      = lipgloss.NewStyle().Margin(0, 1, 0, 0).Bold(true).Foreground(lipgloss.Color("170"))
+	reqLineBoxStyle   = lipgloss.NewStyle().Margin(0, 0, 1, 0)
+	urlStyle          = lipgloss.NewStyle().Foreground(lipgloss.Color("33"))
+	simpleReqView     = NewSimpleView()
+	reqTypeListView   = NewReqTypeListView()
+	pendingView       = NewPendingView()
+	resView           = NewResView()
+	Context           = NewViewContext()
 )
 
 type view uint8
@@ -28,7 +32,8 @@ const (
 )
 
 type ViewContext struct {
-	req           *request.Request
+	req           *request.Req
+	res           *response.Resp
 	view          view
 	SimpleReqView *SimpleReqView
 }
@@ -47,10 +52,8 @@ type SimpleReqView struct {
 	sendBtn  string
 }
 
+// NewSimpleView create a new simple view
 func NewSimpleView() *SimpleReqView {
-
-	// request type list view
-
 	// urlInput text input
 	url := textinput.New()
 	url.Prompt = ""
@@ -65,22 +68,20 @@ func NewSimpleView() *SimpleReqView {
 	}
 }
 
-func (s SimpleReqView) BuildRequest() *request.Request {
-	req := request.New(Context.req.Type)
-	return req
-}
-
 func (s *SimpleReqView) Init() tea.Cmd {
-	return pendingView.spinner.Tick
+	Context.req.OnEnd(func(req *request.Req, resp *response.Resp) {
+		//fmt.Println("xxxxx")
+	})
+	return pendingView.Start()
 }
 
 // VIEW
 
-func (s SimpleReqView) SendRequest() tea.Cmd {
+func (s *SimpleReqView) SendRequest() tea.Cmd {
 	urlText := s.urlInput.Value()
 	url, err := url2.Parse(urlText)
 	if err == nil && url != nil {
-		Context.req.State = request.Sending
+		Context.req.Send()
 		return pendingView.Start()
 	}
 	return nil
@@ -106,6 +107,7 @@ func (s *SimpleReqView) UpdateMainView(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 	var urlCmd, pendingCmd tea.Cmd
 	s.urlInput, urlCmd = s.urlInput.Update(msg)
+	Context.req.ParseURL(s.urlInput.Value())
 	pendingView, pendingCmd = pendingView.Update(msg)
 	return s, tea.Batch(urlCmd, pendingCmd)
 }
@@ -125,15 +127,15 @@ func (s *SimpleReqView) View() string {
 		return fmt.Sprintf(
 			"\n%s\n",
 			mainBoxStyle.Render(
-				lipgloss.JoinVertical(
-					lipgloss.Top,
-					requestLineBoxStyle.Render(
-						lipgloss.JoinHorizontal(
-							lipgloss.Center,
+				layout.VTop(
+					reqLineTitleStyle.Render("http request line"),
+					reqLineBoxStyle.Render(
+						layout.HLeft(
 							reqTypeStyle.Render(Context.req.Type.Name()),
 							s.urlInput.View())),
-					pendingView.View())),
-		) + "\n"
+					pendingView.View(),
+					resView.View(),
+				)))
 	case ReqTypeList:
 		return reqTypeListView.View()
 	}
