@@ -113,16 +113,16 @@ func (s *SimpleReqView) UpdateMainView(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case tea.KeyCtrlH:
 			headerView.AddEmptyHeader()
 			s.urlInput.Blur()
-			headerView.Focus()
-			return s, nil
+			return s, headerView.Focus()
 		}
 	}
-	var urlCmd, pendingCmd, respCmd tea.Cmd
+	var urlCmd, headerCmd, pendingCmd, respCmd tea.Cmd
 	s.urlInput, urlCmd = s.urlInput.Update(msg)
 	Context.Req.ParseURL(s.urlInput.Value())
+	headerView, headerCmd = headerView.Update(msg)
 	pendingView, pendingCmd = pendingView.Update(msg)
 	respView, respCmd = respView.Update(msg)
-	return s, tea.Batch(urlCmd, pendingCmd, respCmd)
+	return s, tea.Batch(urlCmd, headerCmd, pendingCmd, respCmd)
 }
 
 func (s *SimpleReqView) Update(msg tea.Msg) (tea.Model, tea.Cmd) {

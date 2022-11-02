@@ -1,10 +1,16 @@
 package tui
 
 import (
+	"fmt"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 	"github.com/mySingleLive/requi/tui/layout"
 	"strings"
+)
+
+var (
+	headerPromptStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#828282"))
 )
 
 type HeaderRow struct {
@@ -13,8 +19,9 @@ type HeaderRow struct {
 }
 
 type HeaderView struct {
-	Title string
-	Rows  []HeaderRow
+	Title        string
+	Rows         []HeaderRow
+	FocusedInput *textinput.Model
 }
 
 func NewHeaderView() *HeaderView {
@@ -26,11 +33,14 @@ func NewHeaderView() *HeaderView {
 
 func (h *HeaderView) AddEmptyHeader() *HeaderRow {
 	nameInput := textinput.New()
-	nameInput.Prompt = "Header Name"
-	nameInput.Width = 30
+	nameInput.Prompt = "header name"
+	nameInput.PromptStyle = headerPromptStyle
+	nameInput.TextStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#FFFFFF"))
+	nameInput.Width = 20
 	valInput := textinput.New()
-	valInput.Prompt = "Header Value"
-	valInput.Width = 30
+	valInput.Prompt = "header value"
+	valInput.PromptStyle = headerPromptStyle
+	valInput.Width = 20
 	row := HeaderRow{
 		nameInput: nameInput,
 		valInput:  valInput,
@@ -44,31 +54,41 @@ func (h *HeaderView) Init() tea.Cmd {
 }
 
 func (h *HeaderView) Update(msg tea.Msg) (*HeaderView, tea.Cmd) {
-
-	return h, nil
+	var cmd tea.Cmd
+	if h.FocusedInput != nil {
+		if len(h.Rows) > 0 {
+			input := h.Rows[0].nameInput
+			h.Rows[0].nameInput, cmd = input.Update(msg)
+		}
+	}
+	return h, cmd
 }
 
 func (h *HeaderView) Focus() tea.Cmd {
 	if len(h.Rows) > 0 {
-		return h.Rows[0].nameInput.Focus()
+		input := h.Rows[0].nameInput
+		h.FocusedInput = &input
+		h.FocusedInput.Focus()
 	}
 	return nil
 }
 
 func (h *HeaderView) View() string {
 	if len(h.Rows) > 0 {
-		strs := strings.Builder{}
+		str := strings.Builder{}
 		for i := range h.Rows {
 			row := h.Rows[i]
-			strs.WriteString(
+			str.WriteString(
 				layout.HLeft(
+					fmt.Sprintf("%d. ", i+1),
 					row.nameInput.View(),
 					" ",
-					row.valInput.Value(),
+					row.valInput.View(),
 				),
 			)
+			str.WriteString("\n")
 		}
-		return strs.String()
+		return str.String()
 	}
 	return ""
 }
