@@ -3,15 +3,16 @@ package request
 import (
 	"errors"
 	"github.com/go-resty/resty/v2"
+	"github.com/mySingleLive/requi/http"
 	"github.com/mySingleLive/requi/http/response"
 	url2 "net/url"
 )
 
-type RequestType uint8
+type Type uint8
 
-// Req Types
+// Type of http request
 const (
-	GET RequestType = iota
+	GET Type = iota
 	POST
 	PUT
 	HEAD
@@ -21,7 +22,7 @@ const (
 	PATCH
 )
 
-func (t RequestType) Name() string {
+func (t Type) Name() string {
 	switch t {
 	case GET:
 		return "GET"
@@ -45,7 +46,7 @@ func (t RequestType) Name() string {
 
 type restySend func(url string) (*resty.Response, error)
 
-func (t RequestType) RestyRequestSend(request *resty.Request) restySend {
+func (t Type) RestyRequestSend(request *resty.Request) restySend {
 	switch t {
 	case GET:
 		return request.Get
@@ -77,16 +78,16 @@ const (
 type OnEnd func(req *Req, resp *response.Resp)
 
 type Req struct {
-	Type    RequestType
+	Type    Type
 	State   ReqState
 	URL     *url2.URL
-	Headers []Header
-	Body    Body
+	Headers []http.Header
+	Body    http.Body
 	Resp    *response.Resp
 	onEnd   OnEnd
 }
 
-func New(typ RequestType) *Req {
+func New(typ Type) *Req {
 	return &Req{
 		Type:  typ,
 		State: Initialized,
@@ -112,6 +113,9 @@ func (r *Req) Send() error {
 	// Create a Resty Client
 	client := resty.New()
 	request := client.R()
+	if r.URL.Scheme == "" {
+		r.URL.Scheme = "http"
+	}
 	urlText := r.URL.String()
 	send := r.Type.RestyRequestSend(request)
 
@@ -122,10 +126,10 @@ func (r *Req) Send() error {
 			Error:     err,
 		}
 		r.Resp = resp
-		r.State = Success
 		if r.onEnd != nil {
 			r.onEnd(r, resp)
 		}
+		r.State = Success
 	}()
 	return nil
 }

@@ -20,7 +20,7 @@ var (
 	paginationStyle       = list.DefaultStyles().PaginationStyle.PaddingLeft(3)
 	helpStyle             = list.DefaultStyles().HelpStyle.PaddingLeft(3).PaddingBottom(1)
 	quitTextStyle         = lipgloss.NewStyle().Margin(1, 0, 2, 4)
-	reqTypes              = []request.RequestType{
+	reqTypes              = []request.Type{
 		request.GET,
 		request.POST,
 		request.PUT,
@@ -32,10 +32,10 @@ var (
 	}
 )
 
-type item request.RequestType
+type item request.Type
 
 func (i item) FilterValue() string {
-	reqType := request.RequestType(i)
+	reqType := request.Type(i)
 	return reqType.Name()
 }
 
@@ -49,7 +49,7 @@ func (d itemDelegate) Render(w io.Writer, m list.Model, index int, listItem list
 	if !ok {
 		return
 	}
-	reqType := request.RequestType(i)
+	reqType := request.Type(i)
 	str := fmt.Sprintf("%d. %s", index+1, reqType.Name())
 
 	fn := itemStyle.Render
@@ -104,7 +104,7 @@ func (tl *ReqTypeListView) Init() tea.Cmd {
 
 func (tl *ReqTypeListView) SelectCurrentType() {
 	for i, reqType := range reqTypes {
-		if reqType.Name() == Context.req.Type.Name() {
+		if reqType.Name() == Context.Req.Type.Name() {
 			tl.list.Select(i)
 			tl.lastSelectedIndex = i
 			return
@@ -134,7 +134,7 @@ func (tl *ReqTypeListView) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case tea.KeyEnter, tea.KeySpace:
 			i, ok := tl.list.SelectedItem().(item)
 			if ok {
-				Context.req.Type = request.RequestType(i)
+				Context.Req.Type = request.Type(i)
 			}
 			Context.view = Main
 			simpleReqView.urlInput.Focus()

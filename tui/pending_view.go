@@ -34,14 +34,14 @@ func (p *PendingView) Start() tea.Cmd {
 
 func (p *PendingView) Update(msg tea.Msg) (*PendingView, tea.Cmd) {
 	var cmd tea.Cmd
-	if Context.req.State == request.Sending {
+	if Context.Req.State == request.Sending {
 		p.spinner, cmd = p.spinner.Update(msg)
 	}
 	return p, cmd
 }
 
 func (p *PendingView) View() string {
-	if Context.req.State == request.Sending {
+	if Context.Req.State == request.Sending {
 		return pendingBoxStyle.Render(
 			layout.HLeft(
 				p.spinner.View(),
