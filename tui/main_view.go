@@ -117,8 +117,10 @@ func (s *SimpleReqView) UpdateMainView(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 	}
 	var urlCmd, headerCmd, pendingCmd, respCmd tea.Cmd
-	s.urlInput, urlCmd = s.urlInput.Update(msg)
-	Context.Req.ParseURL(s.urlInput.Value())
+	if s.urlInput.Focused() {
+		s.urlInput, urlCmd = s.urlInput.Update(msg)
+		Context.Req.ParseURL(s.urlInput.Value())
+	}
 	headerView, headerCmd = headerView.Update(msg)
 	pendingView, pendingCmd = pendingView.Update(msg)
 	respView, respCmd = respView.Update(msg)
