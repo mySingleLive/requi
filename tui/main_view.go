@@ -6,7 +6,6 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/mySingleLive/requi/http/request"
-	"github.com/mySingleLive/requi/http/response"
 	"github.com/mySingleLive/requi/tui/layout"
 	url2 "net/url"
 )
@@ -37,6 +36,8 @@ type ViewContext struct {
 	view          view
 	SimpleReqView *SimpleReqView
 	showHeaders   bool
+	focusedIndex  int
+	Inputs        []*textinput.Model
 }
 
 func NewViewContext() *ViewContext {
@@ -45,11 +46,74 @@ func NewViewContext() *ViewContext {
 		view:          Main,
 		SimpleReqView: simpleReqView,
 		showHeaders:   false,
+		focusedIndex:  -1,
+		Inputs:        []*textinput.Model{},
 	}
 }
 
 func (c *ViewContext) IsShowHeaders() bool {
 	return len(c.Req.Headers) > 0 || c.showHeaders
+}
+
+func (c *ViewContext) AddInput(input *textinput.Model) int {
+	c.Inputs = append(c.Inputs, input)
+	return len(c.Inputs) - 1
+}
+
+func (c *ViewContext) GetIndex(input *textinput.Model) int {
+	for i := range c.Inputs {
+		if c.Inputs[i] == input {
+			return i
+		}
+	}
+	return -1
+}
+
+func (c *ViewContext) FocusIndex(index int) tea.Cmd {
+	if c.focusedIndex >= 0 && len(c.Inputs) > 0 {
+		c.Inputs[c.focusedIndex].Blur()
+	}
+	c.focusedIndex = index
+	return c.Inputs[c.focusedIndex].Focus()
+}
+
+func (c *ViewContext) Focus(input *textinput.Model) tea.Cmd {
+	i := c.GetIndex(input)
+	if i != -1 {
+		return c.FocusIndex(i)
+	}
+	return nil
+}
+
+func (c *ViewContext) FocusedInput() *textinput.Model {
+	if c.focusedIndex == -1 {
+		return nil
+	}
+	return c.Inputs[c.focusedIndex]
+}
+
+func (c *ViewContext) Blur() {
+	input := c.FocusedInput()
+	if input != nil {
+		input.Blur()
+		c.focusedIndex = -1
+	}
+}
+
+func (c *ViewContext) FocusNext() tea.Cmd {
+	index := c.focusedIndex + 1
+	if index >= len(c.Inputs) {
+		index = 0
+	}
+	return c.FocusIndex(index)
+}
+
+func (c *ViewContext) FocusPrev() tea.Cmd {
+	index := c.focusedIndex - 1
+	if index < 0 {
+		index = len(c.Inputs) - 1
+	}
+	return c.FocusIndex(index)
 }
 
 type SimpleReqView struct {
@@ -66,7 +130,6 @@ func NewSimpleView() *SimpleReqView {
 	url.TextStyle = urlStyle
 	url.Width = 80
 	url.CursorStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("120"))
-	url.Focus()
 
 	return &SimpleReqView{
 		urlInput: url,
@@ -75,10 +138,8 @@ func NewSimpleView() *SimpleReqView {
 }
 
 func (s *SimpleReqView) Init() tea.Cmd {
-	Context.Req.OnEnd(func(req *request.Req, resp *response.Resp) {
-		//fmt.Println("xxxxx")
-
-	})
+	index := Context.AddInput(&s.urlInput)
+	Context.FocusIndex(index)
 	return pendingView.Start()
 }
 
@@ -101,10 +162,10 @@ func (s *SimpleReqView) UpdateMainView(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.KeyMsg:
 		switch msg.Type {
 		case tea.KeyCtrlC:
-			s.urlInput.Blur()
+			Context.Blur()
 			return s, tea.Quit
-		case tea.KeyEnter, tea.KeyEsc:
-			s.urlInput.Blur()
+		case tea.KeyCtrlX:
+			Context.Blur()
 			return s, s.SendRequest()
 		case tea.KeyCtrlT:
 			Context.view = ReqTypeList
@@ -112,19 +173,31 @@ func (s *SimpleReqView) UpdateMainView(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return s, nil
 		case tea.KeyCtrlH:
 			headerView.AddEmptyHeader()
-			s.urlInput.Blur()
 			return s, headerView.Focus()
+		case tea.KeyTab:
+			return s, Context.FocusNext()
+		case tea.KeyEnter:
+
+		case tea.KeyShiftTab:
+			return s, Context.FocusPrev()
 		}
 	}
-	var urlCmd, headerCmd, pendingCmd, respCmd tea.Cmd
+	var headerCmd, pendingCmd, respCmd tea.Cmd
+	var inputCmds []tea.Cmd
+	focusedInput := Context.FocusedInput()
+	if focusedInput != nil {
+		var ic tea.Cmd
+		*focusedInput, ic = focusedInput.Update(msg)
+		inputCmds = append(inputCmds, ic)
+	}
 	if s.urlInput.Focused() {
-		s.urlInput, urlCmd = s.urlInput.Update(msg)
 		Context.Req.ParseURL(s.urlInput.Value())
 	}
 	headerView, headerCmd = headerView.Update(msg)
 	pendingView, pendingCmd = pendingView.Update(msg)
 	respView, respCmd = respView.Update(msg)
-	return s, tea.Batch(urlCmd, headerCmd, pendingCmd, respCmd)
+	inputCmds = append(inputCmds, headerCmd, pendingCmd, respCmd)
+	return s, tea.Batch(inputCmds...)
 }
 
 func (s *SimpleReqView) Update(msg tea.Msg) (tea.Model, tea.Cmd) {

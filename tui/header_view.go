@@ -9,46 +9,58 @@ import (
 	"strings"
 )
 
-var (
-	headerPromptStyle = lipgloss.NewStyle().MarginRight(1).Foreground(lipgloss.Color("#FFFFFF"))
-	headerInputStyle  = lipgloss.NewStyle().Width(35)
-	headerBlock       = layout.NewBlock().Width(80)
-)
-
 type HeaderRow struct {
 	nameInput *textinput.Model
 	valInput  *textinput.Model
 }
 
 type HeaderView struct {
-	Title        string
-	Rows         []HeaderRow
-	FocusedInput *textinput.Model
+	Title           string
+	Rows            []HeaderRow
+	PromptStyle     lipgloss.Style
+	NameInputStyle  lipgloss.Style
+	ValueInputStyle lipgloss.Style
+	IndexStyle      lipgloss.Style
+	BlockStyle      lipgloss.Style
 }
 
 func NewHeaderView() *HeaderView {
 	return &HeaderView{
-		Title: "headers",
-		Rows:  []HeaderRow{},
+		Title:           "headers",
+		Rows:            []HeaderRow{},
+		PromptStyle:     lipgloss.NewStyle().MarginRight(1).Foreground(lipgloss.Color("#FFFFFF")),
+		NameInputStyle:  lipgloss.NewStyle().Width(32),
+		ValueInputStyle: lipgloss.NewStyle().Width(60),
+		IndexStyle:      lipgloss.NewStyle().MarginLeft(2).Foreground(lipgloss.Color("202")),
+		BlockStyle:      lipgloss.NewStyle().Border(lipgloss.RoundedBorder()).BorderForeground(lipgloss.Color("57")),
 	}
 }
 
 func (h *HeaderView) AddEmptyHeader() *HeaderRow {
+	size := len(h.Rows)
+	if size > 0 {
+		lastRow := h.Rows[size-1]
+		if lastRow.nameInput.Value() == "" && lastRow.valInput.Value() == "" {
+			return nil
+		}
+	}
 	nameInput := textinput.New()
 	nameInput.Prompt = ">"
-	nameInput.PromptStyle = headerPromptStyle
+	nameInput.PromptStyle = h.PromptStyle
 	nameInput.Placeholder = "header name"
 	nameInput.TextStyle = lipgloss.NewStyle().Bold(false).Foreground(lipgloss.Color("#FFFFFF"))
 	nameInput.Width = 30
 	valInput := textinput.New()
 	valInput.Prompt = ">"
-	valInput.PromptStyle = headerPromptStyle
+	valInput.PromptStyle = h.PromptStyle
 	valInput.Placeholder = "header value"
 	valInput.Width = 20
 	row := HeaderRow{
 		nameInput: &nameInput,
 		valInput:  &valInput,
 	}
+	Context.AddInput(&nameInput)
+	Context.AddInput(&valInput)
 	h.Rows = append(h.Rows, row)
 	return &row
 }
@@ -58,42 +70,51 @@ func (h *HeaderView) Init() tea.Cmd {
 }
 
 func (h *HeaderView) Update(msg tea.Msg) (*HeaderView, tea.Cmd) {
-	var cmd tea.Cmd
-	if h.FocusedInput != nil {
-		if len(h.Rows) > 0 {
-			input := h.Rows[0].nameInput
-			*h.Rows[0].nameInput, cmd = input.Update(msg)
-		}
-	}
-	return h, cmd
+	return h, nil
 }
 
 func (h *HeaderView) Focus() tea.Cmd {
 	if len(h.Rows) > 0 {
-		h.FocusedInput = h.Rows[0].nameInput
-		return h.FocusedInput.Focus()
+		i := len(h.Rows) - 1
+		return Context.Focus(h.Rows[i].nameInput)
 	}
 	return nil
+}
+
+func (h *HeaderView) Focused() bool {
+	for i := range h.Rows {
+		row := h.Rows[i]
+		if row.nameInput.Focused() || row.valInput.Focused() {
+			return true
+		}
+	}
+	return false
 }
 
 func (h *HeaderView) View() string {
 	if len(h.Rows) > 0 {
 		str := strings.Builder{}
+		title := "headers  "
+		titleStyle := lipgloss.NewStyle().Bold(true).
+			Border(lipgloss.NormalBorder(), false, false, true, false).
+			BorderForeground(lipgloss.Color("#454545")).
+			Foreground(lipgloss.Color("#828282"))
+		str.WriteString(titleStyle.Render(title))
+		str.WriteString("\n")
 		for i := range h.Rows {
 			row := h.Rows[i]
 			str.WriteByte('\n')
 			str.WriteString(
 				layout.HLeft(
-					fmt.Sprintf("  %d. ", i+1),
-					headerInputStyle.Render(row.nameInput.View()),
+					h.IndexStyle.Render(fmt.Sprintf("%d. ", i+1)),
+					h.NameInputStyle.Render(row.nameInput.View()),
 					" ",
-					headerInputStyle.Render(row.valInput.View()),
+					h.ValueInputStyle.Render(row.valInput.View()),
 				),
 			)
-			str.WriteByte('\n')
+			//str.WriteByte('\n')
 		}
-		str.WriteByte('\n')
-		return headerBlock.Render(str.String())
+		return str.String()
 	}
 	return ""
 }
